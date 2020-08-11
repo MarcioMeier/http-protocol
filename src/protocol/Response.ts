@@ -9,6 +9,7 @@ export class Response implements IResponse{
   constructor() {
     this.headers = {};
     this.body = '';
+    this.statusCode = 404;
   }
 
   public addHeader(key: string, value: string): void {

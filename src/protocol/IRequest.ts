@@ -4,5 +4,6 @@ export interface IRequest {
   headers: Object;
   params: Object;
   body: string;
+  protocol: string;
   pathParameters: Object;
 }

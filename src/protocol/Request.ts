@@ -9,7 +9,8 @@ export class Request implements IRequest {
     public resource: string,
     public headers: Object,
     public params: Object,
-    public body: string
+    public body: string,
+    public protocol: string
     ) {
       this.pathParameters = {};
   }

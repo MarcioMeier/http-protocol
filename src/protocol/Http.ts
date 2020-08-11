@@ -4,7 +4,7 @@ import { IResponse } from './IResponse';
 import { IRequest } from './IRequest';
 import { Request } from './Request';
 import { Response } from './Response';
-import { Socket } from "./Socket";
+import { Socket } from './Socket';
 import { Endpoint } from './Endpoint';
 
 export class Http {
@@ -30,17 +30,15 @@ export class Http {
 
   private async processRequest(data: Buffer, socket: net.Socket) {
     const request: IRequest = this.createRequest(data.toString());
-    console.log(JSON.stringify(request, null, 2));
 
     const response = new Response();
     const endpoint = this.findEndpoint(request.method, request.resource);
 
-
     if (endpoint) {
       await endpoint.processRequest(request, response);
     }
-
-    socket.write(this.mountResponse(request, response))
+    
+    socket.write(this.mountResponse(request, response));
   }
 
   private findEndpoint(method: string, route: string): Endpoint | void {
@@ -51,7 +49,7 @@ export class Http {
   private createRequest(strRequest: string): IRequest {
     const args = strRequest.split('\r\n')
 
-    const [method, resourceStr] = args.splice(0,1)[0].split(' ');
+    const [method, resourceStr, protocol] = args.splice(0,1)[0].split(' ');
     const { resource, params } = this.destructQueryString(resourceStr);
 
     const headers: { [key: string]: string } = {};
@@ -74,7 +72,7 @@ export class Http {
     // ? The rest of arguments are the body
     const body = args.join('\r\n')
 
-    return new Request(method, resource, headers, params, body);
+    return new Request(method, resource, headers, params, body, protocol);
   }
 
   private destructQueryString(str: string): { resource: string, params: {}} {
@@ -102,7 +100,76 @@ export class Http {
   
 
   private mountResponse(req: IRequest, res: IResponse): string {
-    // TODO IMPLEMENTAR
-    return res.body;
+    const responseStatus = this.getHttpStatus(res.statusCode);
+
+    const arr = [];
+
+    arr.push(`${req.protocol} ${res.statusCode} ${responseStatus}`);
+
+    res.addHeader('Status', String(res.statusCode))
+    res.addHeader('Content-Type', `${res.mimeType}; charset=utf-8`);
+    res.addHeader('Date', new Date().toUTCString());
+
+    res.addHeader('Content-Length', res.body.length.toString());
+
+    // res.addHeader('Content-Encoding', 'gzip');  // ? Enviar header?
+
+    for (const [key, value] of Object.entries(res.headers)) {
+      arr.push(`${key}: ${value}`);
+    }
+
+    arr.push('');
+
+    arr.push(res.body, '');
+
+    return arr.join('\r\n');
+  }
+
+  private getHttpStatus(statusCode: number = 0): string
+  {
+    const statuses : { [key: number]: string} = {
+      100: 'Continue',
+      101: 'Switching Protocols',
+      200: 'OK',
+      201: 'Created',
+      202: 'Accepted',
+      203: 'Non-Authoritative Information',
+      204: 'No Content',
+      205: 'Reset Content',
+      206: 'Partial Content',
+      300: 'Multiple Choices',
+      301: 'Moved Permanently',
+      302: 'Found',
+      303: 'See Other',
+      304: 'Not Modified',
+      305: 'Use Proxy',
+      307: 'Temporary Redirect',
+      400: 'Bad Request',
+      401: 'Unauthorized',
+      402: 'Payment Required',
+      403: 'Forbidden',
+      404: 'Not Found',
+      405: 'Method Not Allowed',
+      406: 'Not Acceptable',
+      407: 'Proxy Authentication Required',
+      408: 'Request Time-out',
+      409: 'Conflict',
+      410: 'Gone',
+      411: 'Length Required',
+      412: 'Precondition Failed',
+      413: 'Request Entity Too Large',
+      414: 'Request-URI Too Large',
+      415: 'Unsupported Media Type',
+      416: 'Requested range not satisfiable',
+      417: 'Expectation Failed',
+      500: 'Internal Server Error',
+      501: 'Not Implemented',
+      502: 'Bad Gateway',
+      503: 'Service Unavailable',
+      504: 'Gateway Time-out',
+      505: 'HTTP Version not supported',
+    }
+
+    return statuses[statusCode] || '';
   }
 }
