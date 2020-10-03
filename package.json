@@ -4,15 +4,18 @@
   "description": "Http Protocol",
   "main": "index.ts",
   "scripts": {
-    "start": "tsnd --transpile-only --respawn --ignore-watch node_modules src/index.ts"
+    "example-server-file": "tsnd --transpile-only --respawn --ignore-watch node_modules example/server-file/index.ts",
+    "example-server-API": "tsnd --transpile-only --respawn --ignore-watch node_modules example/http/index.ts"
   },
   "author": "Márcio Meier",
   "license": "ISC",
   "dependencies": {
+    "mime-types": "^2.1.27",
     "ts-node-dev": "^1.0.0-pre.56",
     "typescript": "^3.9.7"
   },
   "devDependencies": {
+    "@types/mime-types": "^2.1.0",
     "@types/node": "^14.0.27"
   }
 }

@@ -1,9 +1,12 @@
+import { IEndpoint } from "./IEndpoint";
+
 export interface IRequest {
   method: string;
   resource: string;
-  headers: Object;
-  params: Object;
   body: string;
   protocol: string;
-  pathParameters: Object;
+  headers: { [key: string]: any };
+  params: { [key: string]: any };
+  pathParameters: { [key: string]: any };
+  replacePathParameters(endpoint: IEndpoint): void;
 }

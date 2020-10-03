@@ -1,6 +1,8 @@
 import { IResponse } from './IResponse';
 import { IRequest } from './IRequest';
-export class Endpoint {
+import { IEndpoint } from './IEndpoint';
+import { matchParams } from '../utils/request';
+export class Endpoint implements IEndpoint {
 
   constructor(
     public method: string,
@@ -10,23 +12,20 @@ export class Endpoint {
 
   public async processRequest(req: IRequest, res: IResponse) {
     if (req.method !== this.method)
-      res.response(500, 'Invalid method')
-      
-    if (req.resource !== this.route)
-      res.response(500, 'Invalid route')
+      return res.response(500, 'Invalid method')
 
-    return await this.handle(req, res);
+    if (!matchParams(req.resource, this.route) && this.route !== '*')
+      return res.response(500, 'Invalid route')
+
+    return this.handle(req, res);
   }
 
   private async handle(req: IRequest, res: IResponse) {
     try {
-      const response = this.handler(req, res);
+      const result = this.handler(req, res);
 
-      if (response instanceof Promise) {
-        const result = await response;
-        res.response(200, result);
-      } else {
-        res.response(200, response);
+      if (result instanceof Promise) {
+        await result;
       }
     } catch(err) {
       res.response(500, err.error || err.message || err);

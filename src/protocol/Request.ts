@@ -1,8 +1,10 @@
 import { IRequest } from "./IRequest";
+import { IEndpoint } from "./IEndpoint";
+import { getPathParameters } from '../utils/request';
 
 export class Request implements IRequest {
 
-  public pathParameters: Object
+  public pathParameters: { [key: string]: any };
 
   constructor(
     public method: string,
@@ -15,4 +17,7 @@ export class Request implements IRequest {
       this.pathParameters = {};
   }
 
+  replacePathParameters(endpoint: IEndpoint) {
+    this.pathParameters = getPathParameters(this.resource, endpoint.route);
+  }
 }

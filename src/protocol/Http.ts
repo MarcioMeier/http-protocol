@@ -2,14 +2,18 @@ import * as net from 'net';
 
 import { IResponse } from './IResponse';
 import { IRequest } from './IRequest';
+import { IEndpoint } from './IEndpoint';
 import { Request } from './Request';
 import { Response } from './Response';
-import { Socket } from './Socket';
 import { Endpoint } from './Endpoint';
+import { Socket } from './Socket';
+
+import { kebabToCammel } from '../utils/utils';
+import { matchParams, destructQueryString, getHttpStatuses } from '../utils/request';
 
 export class Http {
   private socket: Socket;
-  private endpoints:Array<Endpoint>;
+  private endpoints:Array<IEndpoint>;
 
   constructor() {
     this.socket = new Socket(this.processRequest.bind(this));
@@ -35,22 +39,39 @@ export class Http {
     const endpoint = this.findEndpoint(request.method, request.resource);
 
     if (endpoint) {
+      request.replacePathParameters(endpoint)
       await endpoint.processRequest(request, response);
     }
-    
+
+    /* console.log(`=================
+    Request to ${request.resource}
+    METHOD ${request.method}
+    PAYLOAD ${request.body}
+    =================
+    STATUS ${response.statusCode}
+    PAYLOAD ${response.body}
+    `) */
+
     socket.write(this.mountResponse(request, response));
+    socket.end();
   }
 
-  private findEndpoint(method: string, route: string): Endpoint | void {
-    const index = this.endpoints.findIndex(endpoint => endpoint.method === method && endpoint.route === route);
-    if (index >= 0) return this.endpoints[index];
+  private findEndpoint(method: string, route: string): IEndpoint | void {
+    const endpoint = this.endpoints.find(endpoint => {
+      if (endpoint.method !== method) return false;
+      return matchParams(route, endpoint.route);
+    });
+
+    if (endpoint) return endpoint;
+
+    return this.endpoints.find(endpoint => endpoint.method === method && endpoint.route === '*');
   }
 
   private createRequest(strRequest: string): IRequest {
     const args = strRequest.split('\r\n')
 
     const [method, resourceStr, protocol] = args.splice(0,1)[0].split(' ');
-    const { resource, params } = this.destructQueryString(resourceStr);
+    const { resource, params } = destructQueryString(resourceStr);
 
     const headers: { [key: string]: string } = {};
 
@@ -61,7 +82,7 @@ export class Http {
       if (header !== '') {
         const [key, value] = header.split(': ')
 
-        headers[this.kebabToCammel(key)] = value;
+        headers[kebabToCammel(key)] = value;
       }
 
     } while(header !== '');
@@ -74,30 +95,6 @@ export class Http {
 
     return new Request(method, resource, headers, params, body, protocol);
   }
-
-  private destructQueryString(str: string): { resource: string, params: {}} {
-    const [resource, query] = str.split('?');
-
-    if (!query) return { resource, params: {}}
-
-    const args = query.substr(1).split('&')
-    const params: {[key: string]: any} = {};
-
-    for (const param of args) {
-      const [key, value] = param.split('=');
-      params[key] = value;
-    }
-
-    return { resource, params };
-  }
-
-  private kebabToCammel(name: string) {
-    const firtLetter = name.substr(0,1)
-    const cammel = name.substr(1).replace(/-([a-zA-Z])/g, (g) => g[1].toUpperCase());
-
-    return `${firtLetter.toLowerCase()}${cammel}`;
-  }
-  
 
   private mountResponse(req: IRequest, res: IResponse): string {
     const responseStatus = this.getHttpStatus(res.statusCode);
@@ -112,8 +109,6 @@ export class Http {
 
     res.addHeader('Content-Length', res.body.length.toString());
 
-    // res.addHeader('Content-Encoding', 'gzip');  // ? Enviar header?
-
     for (const [key, value] of Object.entries(res.headers)) {
       arr.push(`${key}: ${value}`);
     }
@@ -127,49 +122,7 @@ export class Http {
 
   private getHttpStatus(statusCode: number = 0): string
   {
-    const statuses : { [key: number]: string} = {
-      100: 'Continue',
-      101: 'Switching Protocols',
-      200: 'OK',
-      201: 'Created',
-      202: 'Accepted',
-      203: 'Non-Authoritative Information',
-      204: 'No Content',
-      205: 'Reset Content',
-      206: 'Partial Content',
-      300: 'Multiple Choices',
-      301: 'Moved Permanently',
-      302: 'Found',
-      303: 'See Other',
-      304: 'Not Modified',
-      305: 'Use Proxy',
-      307: 'Temporary Redirect',
-      400: 'Bad Request',
-      401: 'Unauthorized',
-      402: 'Payment Required',
-      403: 'Forbidden',
-      404: 'Not Found',
-      405: 'Method Not Allowed',
-      406: 'Not Acceptable',
-      407: 'Proxy Authentication Required',
-      408: 'Request Time-out',
-      409: 'Conflict',
-      410: 'Gone',
-      411: 'Length Required',
-      412: 'Precondition Failed',
-      413: 'Request Entity Too Large',
-      414: 'Request-URI Too Large',
-      415: 'Unsupported Media Type',
-      416: 'Requested range not satisfiable',
-      417: 'Expectation Failed',
-      500: 'Internal Server Error',
-      501: 'Not Implemented',
-      502: 'Bad Gateway',
-      503: 'Service Unavailable',
-      504: 'Gateway Time-out',
-      505: 'HTTP Version not supported',
-    }
-
+    const statuses = getHttpStatuses();
     return statuses[statusCode] || '';
   }
 }

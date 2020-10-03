@@ -1,4 +1,5 @@
 import { IResponse } from './IResponse';
+import { toBody, getMime } from '../utils/utils';
 
 export class Response implements IResponse{
   public headers: { [key: string]: string };
@@ -16,27 +17,10 @@ export class Response implements IResponse{
     this.headers[key] = value;
   }
 
-  public response(statusCode: number, response: string | Object | any[]): void {
+  public response(statusCode: number, response: string | Object | any[], contentType?: string | undefined): void {
     this.statusCode = statusCode;
 
-    this.body = this.toBody(response)
-    this.mimeType = this.getMime();
+    this.body = toBody(response)
+    this.mimeType = contentType || getMime(this.body);
   }
-
-  private toBody(response: string | Object | any[]): string {
-    if (typeof response === 'string') return response;
-
-    return JSON.parse(<any>response);
-  }
-
-  private getMime() {
-    if (/<(?:"[^"]*"['"]*|'[^']*'['"]*|[^'">])+>/.test(this.body)) return 'text/html';
-    
-    try {
-      if (JSON.parse(this.body)) return 'application/json';
-    } catch{}
-
-    return 'text/plain';
-  }
-
 }
