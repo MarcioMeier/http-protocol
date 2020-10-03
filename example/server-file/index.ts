@@ -12,7 +12,6 @@ app.registerEndpoint('GET', '*', async (req: IRequest, res: IResponse) => {
   const resource = req.resource === '/' ?'/index.html' : req.resource;
 
   const file = `${folder}${resource}`;
-  console.log('file -> ', file);
 
   const readFile = util.promisify(fs.readFile);
 

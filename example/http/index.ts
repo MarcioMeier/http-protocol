@@ -2,12 +2,11 @@ import { Http, IResponse, IRequest } from '../../src/index';
 
 const app = new Http();
 
-app.registerEndpoint('POST', '/user/{userId}', async (req: IRequest, res: IResponse) => {
-  /* get user logic */
-
+app.registerEndpoint('PUT', '/user/{userId}', async (req: IRequest, res: IResponse) => {
   const { userId } = req.pathParameters;
   const { showPassword } = req.params;
 
+  // ? put user logic
   const user = {
     id: userId,
     name: 'user name',
